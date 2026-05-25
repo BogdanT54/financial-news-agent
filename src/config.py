@@ -1,6 +1,5 @@
 """Setări încărcate din Colab Secrets (prioritar) sau .env (fallback)."""
 import os
-from functools import lru_cache
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 _COLAB_KEYS = [
@@ -17,22 +16,36 @@ _COLAB_KEYS = [
 ]
 
 
-def _load_colab_secrets() -> None:
-    """Încearcă să încarce secretele din Google Colab Secrets în os.environ."""
+def load_colab_secrets(verbose: bool = False) -> dict:
+    """Încarcă secretele din Google Colab Secrets în os.environ.
+    Returnează un dict {key: 'loaded'|'already_set'|'missing'}.
+    """
+    status = {}
     try:
         from google.colab import userdata  # type: ignore
     except ImportError:
-        return  # Nu suntem în Colab
+        return {k: "not_in_colab" for k in _COLAB_KEYS}
 
     for key in _COLAB_KEYS:
         if os.environ.get(key):
-            continue  # deja setat (din .env sau manual)
+            status[key] = "already_set"
+            continue
         try:
             value = userdata.get(key)
             if value:
                 os.environ[key] = value
+                status[key] = "loaded"
+            else:
+                status[key] = "missing"
         except Exception:
-            pass  # secretul nu există în Colab Secrets — ignoră
+            status[key] = "missing"
+
+    if verbose:
+        for k, s in status.items():
+            icon = "✅" if s in ("loaded", "already_set") else "❌"
+            print(f"  {icon} {k:<25}: {s}")
+
+    return status
 
 
 class Settings(BaseSettings):
@@ -68,7 +81,7 @@ class Settings(BaseSettings):
     DRY_RUN: bool = True
 
 
-@lru_cache(maxsize=1)
 def get_settings() -> Settings:
-    _load_colab_secrets()
+    """Creează Settings după ce încarcă Colab Secrets în os.environ."""
+    load_colab_secrets()
     return Settings()

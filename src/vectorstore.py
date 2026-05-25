@@ -62,6 +62,19 @@ def upsert_articles(articles: list[dict[str, Any]], store: Optional[PineconeVect
     return len(documents)
 
 
+def get_index_stats(index_name: Optional[str] = None) -> dict[str, Any]:
+    """Returnează statisticile indexului Pinecone (total vectori, dimensiune etc.)."""
+    settings = get_settings()
+    name = index_name or settings.PINECONE_INDEX
+    pc = Pinecone(api_key=settings.PINECONE_API_KEY)
+    stats = pc.Index(name).describe_index_stats()
+    return {
+        "total_vector_count": stats.get("total_vector_count", stats.total_vector_count if hasattr(stats, "total_vector_count") else "N/A"),
+        "dimension": stats.get("dimension", stats.dimension if hasattr(stats, "dimension") else "N/A"),
+        "namespaces": dict(stats.get("namespaces", {})),
+    }
+
+
 def as_retriever_tool(
     name: str = "fin_news_vector_search",
     description: str = "Retrieve similar news relating to the provided query from the financial news vector store.",

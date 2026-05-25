@@ -29,6 +29,4 @@ pymongo>=4.6.0
 # Telegram
 python-telegram-bot>=21.0
 
-# Notebook
-ipython>=8.0.0
-ipykernel>=6.0.0
+# Notebook (ipython/ipykernel pre-instalate în Colab — nu le forța)

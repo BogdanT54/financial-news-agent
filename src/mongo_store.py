@@ -31,6 +31,23 @@ def insert_articles(articles: list[dict[str, Any]]) -> int:
     return len(result.inserted_ids)
 
 
+def count_articles() -> int:
+    """Numărul total de articole din colecție."""
+    settings = get_settings()
+    return get_client()[settings.MONGO_DB][settings.MONGO_ARTICLES_COLLECTION].count_documents({})
+
+
+def get_recent_articles(n: int = 10, fields: Optional[dict] = None) -> list[dict]:
+    """Returnează ultimele N articole inserate (sortate descendent după _id)."""
+    settings = get_settings()
+    col = get_client()[settings.MONGO_DB][settings.MONGO_ARTICLES_COLLECTION]
+    projection = fields or {
+        "_id": 0, "title": 1, "sentiment": 1, "confidence_level": 1,
+        "finbert_score": 1, "pubDate": 1, "source_name": 1, "link": 1,
+    }
+    return list(col.find({}, projection).sort("_id", -1).limit(n))
+
+
 def get_chat_memory(session_id: str) -> MongoDBChatMessageHistory:
     """Întoarce memoria conversațională indexată după session_id.
 

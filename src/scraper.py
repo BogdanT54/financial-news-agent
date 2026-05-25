@@ -1,5 +1,6 @@
 """Scraping HTML + curățare + extracție conținut principal cu LLM."""
 import re
+import warnings
 from typing import Optional
 
 import requests
@@ -8,6 +9,17 @@ from pydantic import BaseModel, Field
 
 from .config import get_settings
 from .llm import get_openrouter_llm
+
+# Suprimă warning-urile inofensive de la with_structured_output (LangChain → Pydantic)
+warnings.filterwarnings(
+    "ignore",
+    message=".*PydanticSerializationUnexpectedValue.*",
+)
+warnings.filterwarnings(
+    "ignore",
+    category=UserWarning,
+    module="pydantic.main",
+)
 
 DEFAULT_TIMEOUT = 30
 MAX_CHARS = 9000

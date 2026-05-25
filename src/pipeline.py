@@ -87,18 +87,27 @@ def run_daily_pipeline(
             processed.append(record)
     print(f"   {len(processed)} articles successfully processed")
 
+    persistence_log: list[str] = []
     if effective_persist and processed:
         print("→ Persisting to Pinecone and MongoDB...")
+        for idx, art in enumerate(processed, 1):
+            title = (art.get("title") or "")[:55]
+            sent = art.get("sentiment", "?")
+            print(f"   [{idx}/{len(processed)}] {sent:<8} | {title}")
         try:
             n_pine = vectorstore.upsert_articles(processed)
-            print(f"   Pinecone: {n_pine} vectors upserted")
+            msg = f"   ✅ Pinecone: {n_pine} vectors upserted in index '{settings.PINECONE_INDEX}'"
+            print(msg)
+            persistence_log.append(msg)
         except Exception as exc:
-            print(f"   Pinecone upsert failed: {exc}")
+            print(f"   ❌ Pinecone upsert failed: {exc}")
         try:
             n_mongo = mongo_store.insert_articles(processed)
-            print(f"   MongoDB: {n_mongo} documents inserted")
+            msg = f"   ✅ MongoDB: {n_mongo} documents inserted in '{settings.MONGO_DB}.{settings.MONGO_ARTICLES_COLLECTION}'"
+            print(msg)
+            persistence_log.append(msg)
         except Exception as exc:
-            print(f"   MongoDB insert failed: {exc}")
+            print(f"   ❌ MongoDB insert failed: {exc}")
     else:
         print("→ Skipping persistence (DRY_RUN)")
 
@@ -176,4 +185,6 @@ def run_daily_pipeline(
             "bearish": bearish_text,
         },
         "processed_articles": processed,
+        "persistence_log": persistence_log,
+        "persisted": bool(effective_persist and persistence_log),
     }

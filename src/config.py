@@ -1,7 +1,38 @@
-"""Setări încărcate din .env."""
+"""Setări încărcate din Colab Secrets (prioritar) sau .env (fallback)."""
+import os
 from functools import lru_cache
-from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+_COLAB_KEYS = [
+    "NEWSDATA_API_KEY",
+    "HF_API_TOKEN",
+    "OPENROUTER_API_KEY",
+    "OPENAI_API_KEY",
+    "PINECONE_API_KEY",
+    "PINECONE_INDEX",
+    "MONGO_URI",
+    "MONGO_DB",
+    "TELEGRAM_BOT_TOKEN",
+    "TELEGRAM_CHAT_ID",
+]
+
+
+def _load_colab_secrets() -> None:
+    """Încearcă să încarce secretele din Google Colab Secrets în os.environ."""
+    try:
+        from google.colab import userdata  # type: ignore
+    except ImportError:
+        return  # Nu suntem în Colab
+
+    for key in _COLAB_KEYS:
+        if os.environ.get(key):
+            continue  # deja setat (din .env sau manual)
+        try:
+            value = userdata.get(key)
+            if value:
+                os.environ[key] = value
+        except Exception:
+            pass  # secretul nu există în Colab Secrets — ignoră
 
 
 class Settings(BaseSettings):
@@ -39,4 +70,5 @@ class Settings(BaseSettings):
 
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:
+    _load_colab_secrets()
     return Settings()
